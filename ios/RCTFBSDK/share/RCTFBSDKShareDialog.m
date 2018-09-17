@@ -63,16 +63,18 @@ RCT_EXPORT_MODULE(FBShareDialog);
 RCT_EXPORT_METHOD(canShow:(RCTFBSDKSharingContent)content resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
 {
   _shareDialog.shareContent = content;
-  if ([_shareDialog canShow]) {
-    NSError *error;
-    if ([_shareDialog validateWithError:&error]) {
-      resolve(@YES);
+  dispatch_async(dispatch_get_main_queue(), ^{
+    if ([self->_shareDialog canShow]) {
+      NSError *error;
+      if ([self->_shareDialog validateWithError:&error]) {
+        resolve(@YES);
+      } else {
+        reject(@"FacebookSDK", @"SharingContent is invalid", error);
+      }
     } else {
-      reject(@"FacebookSDK", @"SharingContent is invalid", error);
+      resolve(@NO);
     }
-  } else {
-    resolve(@NO);
-  }
+  });
 }
 
 RCT_EXPORT_METHOD(show:(RCTFBSDKSharingContent)content
@@ -83,17 +85,10 @@ RCT_EXPORT_METHOD(show:(RCTFBSDKSharingContent)content
   _showReject = reject;
   _shareDialog.shareContent = content;
   dispatch_async(dispatch_get_main_queue(), ^{
-    if (!_shareDialog.fromViewController) {
-      UIViewController *viewController = [UIApplication sharedApplication].delegate.window.rootViewController;
-
-      // get the view controller closest to the foreground
-      while (viewController.presentedViewController && !viewController.isBeingDismissed) {
-        viewController = viewController.presentedViewController;
-      }
-
-      _shareDialog.fromViewController = viewController;
+    if (!self->_shareDialog.fromViewController) {
+      self->_shareDialog.fromViewController = RCTPresentedViewController();
     }
-    [_shareDialog show];
+    [self->_shareDialog show];
   });
 }
 
